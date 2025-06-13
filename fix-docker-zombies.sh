@@ -1,24 +1,27 @@
 #!/bin/bash
 
-echo "🚫 Killing zombie Docker containers (if any)..."
+echo "🚫 Searching for zombie Docker containers (Django/Playit)..."
 
-CONTAINERS=("project-django-1" "project-playit-1")
+# Dynamically find container names containing 'django' or 'playit'
+CONTAINERS=$(docker ps -a --format '{{.Names}}' | grep -E 'django|playit')
 
-for name in "${CONTAINERS[@]}"; do
-    if docker ps -a --format '{{.Names}}' | grep -q "^$name$"; then
+if [ -z "$CONTAINERS" ]; then
+    echo "✅ No Django or Playit containers found."
+else
+    for name in $CONTAINERS; do
         PID=$(docker inspect --format '{{ .State.Pid }}' "$name" 2>/dev/null)
+
         if [ -n "$PID" ] && [ "$PID" -ne 0 ]; then
-            echo "🧟 Killing $name (PID: $PID)"
-            sudo kill -9 "$PID"
+            echo "🧟 Killing container '$name' (PID: $PID)..."
+            sudo kill -9 "$PID" || echo "⚠️ Failed to kill PID $PID"
         fi
-        echo "🗑️ Removing $name"
-        sudo docker rm -f "$name"
-    else
-        echo "✅ Container $name not found or already removed."
-    fi
-done
+
+        echo "🗑️ Removing container '$name'..."
+        sudo docker rm -f "$name" || echo "⚠️ Failed to remove $name"
+    done
+fi
 
 echo "🔻 Running docker-compose down just in case..."
-docker-compose down
+sudo docker-compose down || echo "⚠️ docker-compose down failed"
 
-echo "✅ All containers shut down cleanly."
+echo "✅ Cleanup complete. All containers shut down cleanly."
