@@ -1,0 +1,16 @@
+services:
+  django:
+    container_name: helloworld-django
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+    restart: unless-stopped
+
+  playit:
+    image: ghcr.io/playit-cloud/playit-agent:0.15
+    network_mode: host
+    environment:
+      - SECRET_KEY=ec23c7ae3ec312180418a868ccccf5d844af5d26f1b0bcc6abcb0a92a3112527
+    restart: unless-stopped
